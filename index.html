@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>방탈출: 조동사 수동태</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 방과 후 텅 빈 학교, 살짝 긴장되지만 친절한 게임 진행자
+   IDEA: 불 꺼진 학교 평면도 + 각 교실 문에 붙은 이용 안내문, 비상구 초록 불빛
+   PICTURE: 4개 교실과 비상구가 있는 평면도, 풀면 방에 불이 켜지고 열쇠 숫자가 생김
+   COLOUR and TYPE: 밤의 남청색 바탕 + 비상구 초록 + 안내문 종이색; Black Han Sans + Noto Sans KR
+   LAYOUT: 상단 상태줄(시간·열쇠), 평면도, 방 화면은 안내문→대화→조건→입력 한 열 */
+:root{color-scheme:dark;--bg:#0c1424;--bg2:#131f36;--ink:#e8eef8;--soft:#9fb0cc;--line:#2a3a5c;--exit:#22c55e;--exitd:#0f3d24;--paper:#fbf8ef;--pink:#ff6b7d;--warn:#fde68a;--blue:#7aa7ff}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#1b2b4d,var(--bg));color:var(--ink);font:16px/1.6 "Noto Sans KR",system-ui,sans-serif;overflow-x:clip;min-height:100vh}
+.wrap{max-width:820px;margin:0 auto;padding:clamp(18px,4vw,40px) max(4vw,14px) 60px}
+h1,h2,.bh{font-family:"Black Han Sans","Noto Sans KR",sans-serif;font-weight:400;letter-spacing:.5px}
+h1{font-size:clamp(28px,6vw,44px);line-height:1.1;margin:0 0 6px;text-wrap:balance}
+h2{font-size:26px;margin:0 0 6px}
+.sub{color:var(--soft);margin:0 0 18px}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.pill{background:var(--bg2);border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-weight:700;white-space:nowrap}
+.keys{display:flex;gap:6px}
+.k{width:34px;height:34px;border-radius:8px;border:2px dashed var(--line);display:grid;place-items:center;font:900 18px "Noto Sans KR"}
+.k.on{border:2px solid var(--exit);background:var(--exitd);color:var(--exit)}
+.map{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;background:#0a1120;border:3px solid var(--line);border-radius:16px;padding:12px;position:relative}
+.room{position:relative;min-height:150px;border-radius:10px;border:2px solid var(--line);background:#0e182b;color:var(--ink);text-align:left;padding:14px;cursor:pointer;font:inherit;overflow:hidden;transition:transform .15s}
+.room:hover{transform:translateY(-2px);border-color:var(--blue)}
+.room .ic{font-size:40px;line-height:1;filter:grayscale(1) brightness(.6)}
+.room .nm{display:block;font:400 22px "Black Han Sans","Noto Sans KR";margin-top:8px}
+.room .st{font-size:14px;color:var(--soft)}
+.room .lock{position:absolute;right:12px;top:12px;font-size:22px}
+.room.done{background:linear-gradient(160deg,#2c3b1d,#14301f);border-color:var(--exit)}
+.room.done .ic{filter:none}
+.room.done .st{color:var(--exit);font-weight:700}
+.exit{grid-column:1/-1;min-height:84px;display:flex;align-items:center;justify-content:center;gap:12px;background:var(--exitd);border:2px solid var(--exit);color:var(--exit);font:400 26px "Black Han Sans","Noto Sans KR";border-radius:10px;cursor:pointer}
+.exit[disabled]{opacity:.45;cursor:not-allowed;filter:grayscale(.6)}
+.exit .man{display:inline-grid;place-items:center;width:46px;height:46px;background:var(--exit);color:#04210f;border-radius:6px;font-size:28px}
+.panel{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:clamp(16px,3vw,26px)}
+.notice{background:var(--paper);color:#1f2937;border-radius:6px;padding:14px;box-shadow:0 12px 30px -12px #000;transform:rotate(-.6deg);position:relative;margin:14px 0 18px}
+.notice::before,.notice::after{content:"";position:absolute;top:-8px;width:16px;height:16px;border-radius:50%;background:#e11d48;box-shadow:0 2px 3px #0006}
+.notice::before{left:16px}.notice::after{right:16px}
+.notice table{width:100%;border-collapse:collapse;font-size:15px}
+.notice caption{font-weight:900;font-size:17px;padding-bottom:8px}
+.notice th,.notice td{border:1.5px solid #374151;padding:8px;text-align:center}
+.notice th{width:34%;background:#f1ead6}
+.dlg{background:#0e182b;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.dlg p{margin:4px 0;display:grid;grid-template-columns:auto 1fr;gap:8px}
+.who{font-weight:700;color:var(--blue);white-space:nowrap}
+.blank{display:inline-block;min-width:140px;border-bottom:2px solid var(--warn);color:var(--warn);font-weight:700}
+.cond{margin:16px 0 0;padding:12px 14px;border:1.5px solid var(--soft);border-radius:8px;font-size:15px}
+.cond b{display:block;margin-bottom:4px}
+.cond ul{margin:0;padding-left:18px}
+.cond li.hit{color:var(--exit)}.cond li.miss{color:var(--pink);font-weight:700}
+label.a{display:block;margin:18px 0 6px;font-weight:700}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input[type=text]{flex:1 1 280px;font:16px "Noto Sans KR";padding:12px 14px;border:2px solid var(--line);border-radius:10px;background:#0a1120;color:var(--ink);min-height:48px}
+input[type=text]:focus{outline:none;border-color:var(--warn)}
+.wc{font-size:14px;color:var(--soft);margin-top:6px}.wc.bad{color:var(--pink)}
+button.b{font:700 15px "Noto Sans KR";min-height:48px;padding:0 18px;border-radius:10px;border:2px solid var(--exit);cursor:pointer;background:var(--exit);color:#04210f}
+button.g{background:transparent;color:var(--ink);border-color:var(--line)}
+button:focus-visible{outline:3px solid var(--warn);outline-offset:2px}
+.fb{margin-top:14px;border-radius:10px;padding:14px 16px}
+.fb.no{background:#3a1720;border:1px solid #7a2a39}.fb.ok{background:var(--exitd);border:1px solid var(--exit)}
+.fb h3{margin:0 0 6px;font-size:18px}
+.fb ul{margin:6px 0 0;padding-left:20px}
+.hintbox{margin-top:10px;padding:10px 12px;border-radius:8px;background:#3b3413;color:var(--warn);font-size:15px}
+.model{margin-top:10px;padding:10px 12px;border-radius:8px;background:#0a1120;border:1px dashed var(--warn)}
+.nav{display:flex;justify-content:space-between;gap:8px;margin-top:18px;flex-wrap:wrap}
+.steps{list-style:none;margin:16px 0 0;padding:0;counter-reset:s}
+.steps>li{counter-increment:s;position:relative;padding:0 0 14px 44px}
+.steps>li::before{content:counter(s);position:absolute;left:0;top:0;width:32px;height:32px;border-radius:50%;background:var(--warn);color:#1f1a05;font-weight:900;display:grid;place-items:center}
+.steps b.t{display:block;font-size:17px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:2px solid var(--warn);border-radius:8px;padding:2px 9px;font-weight:700;position:relative}
+.chip small{position:absolute;top:-10px;right:-6px;background:var(--pink);color:#fff;border-radius:10px;font-size:11px;padding:0 5px;line-height:16px}
+.x{color:var(--pink);font-weight:700}
+.tag{display:inline-block;background:var(--warn);color:#1f1a05;font-weight:900;border-radius:6px;padding:2px 10px;font-size:14px}
+.keypad{display:grid;grid-template-columns:repeat(4,64px);gap:10px;justify-content:center;margin:18px 0}
+.keypad input{width:64px;height:76px;text-align:center;font:900 34px "Noto Sans KR";border-radius:10px;border:2px solid var(--exit);background:#04150b;color:var(--exit)}
+.win{text-align:center}
+.big{font:400 clamp(40px,10vw,72px)/1.1 "Black Han Sans","Noto Sans KR";color:var(--exit);text-shadow:0 0 24px #22c55e88}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--exit);color:#04210f;font-weight:900;padding:12px 20px;border-radius:12px;box-shadow:0 10px 30px #0008;animation:up .4s ease}
+@keyframes up{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 #22c55e00}50%{box-shadow:0 0 28px #22c55eaa}}
+.exit:not([disabled]){animation:glow 1.6s infinite}
+@media(prefers-reduced-motion:reduce){.exit:not([disabled]),.toast{animation:none}.room{transition:none}}
+@media(max-width:600px){.room{min-height:120px;padding:10px}.room .ic{font-size:30px}.room .nm{font-size:18px}.keypad{grid-template-columns:repeat(4,56px)}.keypad input{width:56px;height:66px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>방탈출: 방과 후 학교에 갇혔다!</h1>
+  <p class="sub">교실 문마다 붙은 이용 안내문을 읽고 <b>조동사 + be + 과거분사</b> 문장을 완성하면 열쇠 숫자를 얻어요. 네 숫자를 모아 비상구를 열고 탈출하세요.</p>
+  <div class="bar"><span class="pill" id="time">⏱ 00:00</span><span class="pill" id="miss">오답 0회</span><div class="keys" id="keys"></div></div>
+  <div id="view"></div>
+</div>
+<script>
+{
+const R=[
+ {name:'과학실',ic:'🧪',digit:'7',title:'Science Lab Rules',rules:[['Goggles','Wear them during experiments.'],['Food and Drinks','Do not bring them into the lab.']],
+  d:[['Minsu','Ms. Kim, can I eat my sandwich here during the experiment?'],['Ms. Kim',"Sorry, Minsu. Look at the sign. ___."],['Minsu',"OK. I'll eat it after class."]],
+  noun:'food',nounF:['food'],verb:'bring',pp:'brought',wrong:['bring','brings','bringing','bringed','brang'],need:[['lab'],['not','cannot']],
+  model:'Food must not be brought into the lab.',hint:'bring – brought – brought. “가져와서는 안 된다” → must not be brought. 장소는 into the lab.'},
+ {name:'음악실',ic:'🎹',digit:'3',title:'Music Room Rules',rules:[['Piano','Play it only during music class.'],['Guitars',"Borrow them with a teacher's permission."]],
+  d:[['Jiwoo','Mr. Park, can I play the piano at lunchtime?'],['Mr. Park',"I'm sorry, but you can't. ___."],['Jiwoo',"Oh, then I'll wait until music class on Thursday."]],
+  noun:'piano',nounF:['piano','pianos'],verb:'play',pp:'played',wrong:['play','plays','playing','plaied'],need:[['class'],['only']],
+  model:'Pianos can be played only during music class.',hint:'play – played – played. “~에만” → only, “음악 시간 동안” → during music class. 8단어가 되도록 주어(관사 유무, 단·복수)를 맞춰 보세요.'},
+ {name:'컴퓨터실',ic:'💻',digit:'9',title:'Computer Room Rules',rules:[['Computers','Turn them off after use.'],['Phones','Keep them in your bag.']],
+  d:[['Seoyeon',"I'm done with my report. Can I just leave now?"],['Teacher','Wait, Seoyeon. Check the rules first. ___.'],['Seoyeon',"Oh, sorry. I'll turn mine off right now."]],
+  noun:'computer',nounF:['computer','computers'],verb:'turn',pp:'turned',wrong:['turn','turns','turning'],need:[['off'],['after']],
+  model:'The computers must be turned off after use.',hint:'turn off는 수동태에서도 off가 따라와요 → must be turned off. 언제? after use.'},
+ {name:'체육관',ic:'🏀',digit:'1',title:'Gym Rules',rules:[['Shoes','Wear indoor shoes only.'],['Balls','Put them back in the basket after use.']],
+  d:[['Junho',"Let's go! The bell rang."],['Coach','Wait, Junho. You left the balls on the floor. ___.'],['Junho',"Sorry! I'll do it now."]],
+  noun:'ball',nounF:['ball','balls'],verb:'put',pp:'put',wrong:['puts','putting','putted'],need:[['back'],['basket']],
+  model:'Balls must be put back in the basket.',hint:'put – put – put (세 형태가 같아요). must be put back + 어디에? in the basket. 8단어가 되도록 주어를 맞춰 보세요.'}
+];
+const MOD=['can','cannot','must','should','may','will','could','might','would'];
+const st=R.map(()=>({ans:'',done:false,wrong:0,checks:null,fb:null}));
+let view='intro',cur=0,t0=null,totalWrong=0,timer=null,finalT=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const words=s=>s.trim().replace(/[.!?]+$/,'').split(/\s+/).filter(Boolean);
+
+function grade(q,raw){
+  const s=raw.trim(),w=words(s),lw=w.map(x=>x.toLowerCase().replace(/[.,!?]/g,''));
+  const contr=/['’]/.test(s);
+  const exp=words(s.replace(/can['’]t/gi,'cannot').replace(/(must|should|would|could|won)n['’]t/gi,'$1 not')).map(x=>x.toLowerCase().replace(/[.,!?]/g,''));
+  const hasNoun=exp.some(x=>q.nounF.includes(x)), hasPP=exp.includes(q.pp), hasWrong=q.wrong.some(x=>exp.includes(x));
+  const im=exp.findIndex(x=>MOD.includes(x));
+  let j=im+1; while(j>0&&['not','only'].includes(exp[j]))j++;
+  const hasBe=im>=0&&exp[j]==='be'; let k=j+1; while(hasBe&&['only','not'].includes(exp[k]))k++;
+  const passive=hasBe&&exp[k]===q.pp;
+  const content=q.need.every(g=>g.some(x=>exp.includes(x)));
+  const cap=/^[A-Z]/.test(s),dot=/\.$/.test(s);
+  const c={words:hasNoun&&(hasPP||hasWrong),passive,eight:w.length===8&&!contr,content,full:cap&&dot};
+  const m=[];
+  if(!hasNoun)m.push(`${q.noun}(또는 복수형)를 주어로 써야 해요.`);
+  if(!hasPP&&!hasWrong)m.push(`${q.verb}의 알맞은 형태를 써야 해요.`);
+  if(im<0)m.push('조동사(can, must, should 등)가 없어요.');
+  else if(!hasBe)m.push('수동태는 <b>조동사 + be + 과거분사</b>예요. be가 빠졌거나 위치가 달라요.');
+  else if(!passive)m.push(`be 뒤에는 과거분사가 와야 해요. ${esc(q.verb)}의 과거분사는 무엇일까요?`);
+  if(contr)m.push("축약형(can't 등)은 쓸 수 없어요. cannot이나 must not으로 써요.");
+  else if(w.length!==8)m.push(`지금 ${w.length}단어예요. 정확히 8단어로 써야 해요.`);
+  if(!content)m.push('안내문의 규칙과 대화 내용이 다 들어갔는지 다시 확인해요.');
+  if(!c.full)m.push('전체 문장으로: 대문자로 시작하고 마침표로 끝내요.');
+  return {c,m,ok:Object.values(c).every(Boolean)};
+}
+
+function fmt(ms){const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+function hud(){
+  $('time').textContent='⏱ '+(t0?fmt((finalT||Date.now())-t0):'00:00');
+  $('miss').textContent='오답 '+totalWrong+'회';
+  $('keys').innerHTML=R.map((r,i)=>`<span class="k ${st[i].done?'on':''}" title="${r.name} 열쇠">${st[i].done?r.digit:'?'}</span>`).join('');
+}
+function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;document.body.appendChild(d);setTimeout(()=>d.remove(),2200)}
+
+function render(){hud();({intro,map,room,exit,win})[view]();window.scrollTo({top:0})}
+
+function intro(){
+  const ch=['The','trays','must','be','returned','to','the','counter.'];
+  $('view').innerHTML=`<div class="panel"><span class="tag">연습 문제 · 먼저 풀이 방법 보기</span>
+   <div class="notice"><table><caption>Cafeteria Rules</caption><tr><th>Trays</th><td>Return them to the counter after eating.</td></tr><tr><th>Seats</th><td>Clean your table before you leave.</td></tr></table></div>
+   <div class="dlg"><p><span class="who">Yuna:</span><span>I'm full! Can I just leave my tray on the table?</span></p>
+   <p><span class="who">Teacher:</span><span>No, Yuna. Read the rules. <span class="blank">The trays must be returned to the counter</span>.</span></p>
+   <p><span class="who">Yuna:</span><span>Oh, OK. I'll take it there now.</span></p></div>
+   <div class="cond"><b>&lt;조건&gt;</b><ul><li>tray, return을 포함하되, 필요하면 형태를 바꿀 것.</li><li>조동사를 포함한 수동태 문장으로 쓸 것.</li><li>8단어로 쓸 것. (축약형은 쓰지 말 것)</li><li>안내문과 대화의 내용을 바탕으로 쓸 것.</li><li>전체 문장을 쓸 것.</li></ul></div>
+   <ol class="steps">
+    <li><b class="t">안내문에서 규칙 찾기</b>Trays → 먹고 나서 카운터에 반납하기 (Return them to the counter)</li>
+    <li><b class="t">주어를 사물로 바꾸기</b>“식판이 반납되어야 한다” → 주어는 <b>The trays</b>, 동사는 수동태</li>
+    <li><b class="t">조동사 + be + 과거분사</b>must + be + <b>returned</b> → must be returned</li>
+    <li><b class="t">8단어 세고 전체 문장으로</b>대문자로 시작, 마침표로 끝!
+      <div class="chips">${ch.map((w,i)=>`<span class="chip">${w}<small>${i+1}</small></span>`).join('')}</div></li>
+    <li><b class="t">이렇게 쓰면 문이 안 열려요</b>
+      <span class="x">✗</span> The trays <u>must returned</u> to the counter. (be 빠짐)<br>
+      <span class="x">✗</span> The trays <u>must be return</u> to the counter. (과거분사 아님)<br>
+      <span class="x">✗</span> You must return the trays to the counter. (수동태 아님)<br>
+      <span class="x">✗</span> The trays <u>can't</u> be left on the table. (축약형)</li>
+   </ol>
+   <p style="color:var(--soft);font-size:14px">※ cannot은 한 단어로 세요. 한 번 틀리면 힌트, 두 번 틀리면 정답이 나와요.</p>
+   <div class="nav" style="justify-content:flex-end"><button class="b" id="go">게임 시작! 🔦</button></div></div>`;
+  $('go').onclick=()=>{if(!t0){t0=Date.now();timer=setInterval(hud,1000)}view='map';render()};
+}
+
+function map(){
+  const all=st.every(s=>s.done);
+  $('view').innerHTML=`<div class="map">${R.map((r,i)=>`<button class="room ${st[i].done?'done':''}" data-i="${i}">
+     <span class="lock">${st[i].done?'🔓':'🔒'}</span><span class="ic">${r.ic}</span><span class="nm">${r.name}</span>
+     <span class="st">${st[i].done?'열쇠 숫자 '+r.digit+' 획득!':'안내문을 읽고 문을 열어라'}</span></button>`).join('')}
+     <button class="exit" id="ex" ${all?'':'disabled'}><span class="man">🏃</span>${all?'비상구 열기':'비상구 (열쇠 4개 필요)'}</button></div>
+   <div class="nav"><button class="b g" id="back">← 풀이 방법 다시 보기</button></div>`;
+  document.querySelectorAll('.room').forEach(b=>b.onclick=()=>{cur=+b.dataset.i;view='room';render()});
+  $('ex').onclick=()=>{view='exit';render()};
+  $('back').onclick=()=>{view='intro';render()};
+}
+
+function room(){
+  const q=R[cur],s=st[cur],ck=s.checks;
+  const li=(k,t)=>`<li class="${ck?(ck[k]?'hit':'miss'):''}">${t}</li>`;
+  $('view').innerHTML=`<div class="panel"><h2>${q.ic} ${q.name} 문</h2>
+   <p style="margin:0;color:var(--soft)">문에 붙은 안내문을 보고, 자연스러운 대화가 되도록 빈칸에 들어갈 문장을 &lt;조건&gt;에 맞게 쓰세요.</p>
+   <div class="notice"><table><caption>${q.title}</caption>${q.rules.map(([a,b])=>`<tr><th>${a}</th><td>${b}</td></tr>`).join('')}</table></div>
+   <div class="dlg">${q.d.map(([w,t])=>`<p><span class="who">${w}:</span><span>${esc(t).replace('___',s.done?`<span class="blank">${esc(s.ans.replace(/\.$/,''))}</span>`:'<span class="blank">&nbsp;</span>')}</span></p>`).join('')}</div>
+   <div class="cond"><b>&lt;조건&gt;</b><ul>
+    ${li('words',`${q.noun}, ${q.verb}를 포함하되, 필요하면 형태를 바꿀 것.`)}
+    ${li('passive','조동사를 포함한 수동태 문장으로 쓸 것.')}
+    ${li('eight','8단어로 쓸 것. (축약형은 쓰지 말 것)')}
+    ${li('content','안내문과 대화의 내용을 바탕으로 쓸 것.')}
+    ${li('full','전체 문장을 쓸 것.')}</ul></div>
+   ${s.done?`<div class="fb ok"><h3>🔓 문이 열렸어요! 열쇠 숫자: ${q.digit}</h3><p style="margin:0">내 답: ${esc(s.ans)}</p></div>`:
+   `<label class="a" for="in">🔑 문을 여는 문장</label>
+   <div class="row"><input type="text" id="in" autocomplete="off" autocapitalize="sentences" spellcheck="false" placeholder="영어 문장을 입력하세요" value="${esc(s.ans)}"><button class="b" id="chk">문 열기</button></div>
+   <div class="wc" id="wc"></div><div id="fb">${s.fb||''}</div>`}
+   <div class="nav"><button class="b g" id="back">← 평면도로</button></div></div>`;
+  $('back').onclick=()=>{view='map';render()};
+  if(s.done)return;
+  const inp=$('in');
+  const wc=()=>{const n=words(inp.value).length;$('wc').textContent=inp.value.trim()?`단어 수: ${n} / 8`:'';$('wc').className='wc'+(n&&n!==8?' bad':'')};
+  inp.oninput=wc;wc();inp.onkeydown=e=>{if(e.key==='Enter')check()};$('chk').onclick=check;
+}
+
+function check(){
+  const q=R[cur],s=st[cur],v=$('in').value;
+  if(!v.trim()){$('wc').textContent='먼저 문장을 입력하세요.';$('wc').className='wc bad';return}
+  const r=grade(q,v);s.ans=v.trim();s.checks=r.c;
+  if(r.ok){s.done=true;s.fb=null;toast(`🔓 ${q.name} 열림! 열쇠 숫자 ${q.digit}`);
+    if(st.every(x=>x.done)){view='map'}render();return}
+  s.wrong++;totalWrong++;
+  let h=`<div class="fb no"><h3>🔒 문이 꿈쩍도 안 해요 (${s.wrong}번째 시도)</h3><ul>${r.m.map(x=>`<li>${x}</li>`).join('')}</ul>
+   <div class="hintbox"><b>💡 힌트</b> ${esc(q.hint)}</div>`;
+  h+=s.wrong>=2?`<div class="model"><b>두 번 틀렸으니 정답을 알려 줄게요:</b> ${esc(q.model)}<br><span style="font-size:14px;color:var(--soft)">정답을 직접 입력해야 문이 열려요.</span></div>`:
+   `<p style="margin:8px 0 0;font-size:14px">힌트를 보고 다시 써 보세요. 한 번 더 틀리면 정답이 공개돼요.</p>`;
+  s.fb=h+'</div>';render();
+}
+
+function exit(){
+  $('view').innerHTML=`<div class="panel" style="text-align:center"><h2>🚪 비상구 자물쇠</h2>
+   <p style="color:var(--soft)">모은 열쇠 숫자를 <b>과학실 → 음악실 → 컴퓨터실 → 체육관</b> 순서로 입력하세요.</p>
+   <div class="keypad">${R.map((r,i)=>`<input inputmode="numeric" maxlength="1" id="d${i}" aria-label="${r.name} 숫자">`).join('')}</div>
+   <div id="em" style="min-height:24px;color:var(--pink);font-weight:700"></div>
+   <div class="nav" style="justify-content:center"><button class="b g" id="back">← 평면도로</button><button class="b" id="open">자물쇠 열기</button></div></div>`;
+  const ins=R.map((r,i)=>$('d'+i));
+  ins.forEach((el,i)=>el.oninput=()=>{el.value=el.value.replace(/\D/g,'');if(el.value&&ins[i+1])ins[i+1].focus()});
+  ins[0].focus();
+  $('back').onclick=()=>{view='map';render()};
+  $('open').onclick=()=>{const code=ins.map(x=>x.value).join('');
+    if(code===R.map(r=>r.digit).join('')){finalT=Date.now();clearInterval(timer);view='win';render()}
+    else $('em').textContent='삐빅! 순서나 숫자를 다시 확인하세요. (과학실 → 음악실 → 컴퓨터실 → 체육관)'};
+}
+
+function win(){
+  $('view').innerHTML=`<div class="panel win"><div class="big">탈출 성공!</div>
+   <p>탈출 시간 <b>${fmt(finalT-t0)}</b> · 오답 <b>${totalWrong}회</b></p>
+   <div class="dlg" style="text-align:left">${R.map((r,i)=>`<p><span class="who">${r.ic} ${r.name}</span><span>${esc(st[i].ans)}</span></p>`).join('')}</div>
+   <p style="color:var(--soft);font-size:15px">조동사 + be + 과거분사, 이제 시험에서도 문을 열 수 있어요!</p>
+   <div class="nav" style="justify-content:center"><button class="b" id="again">다시 도전하기</button></div></div>`;
+  $('again').onclick=()=>{st.forEach(s=>{s.ans='';s.done=false;s.wrong=0;s.checks=null;s.fb=null});t0=null;finalT=null;totalWrong=0;clearInterval(timer);view='intro';render()};
+}
+
+render();
+}
+</script>
+</body>
+</html>
